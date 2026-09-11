@@ -14,6 +14,8 @@ A native, offline-first Android application that captures and stores status bar 
 ## Key Features
 
 - **Status Bar Notification Capture**: Continuous background interception powered by [`NotificationCaptureService`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/service/NotificationCaptureService.kt) (`NotificationListenerService`). Automatically skips internal self-notifications and system noise.
+- **Real-Time Keyword Search & Application Filtering**: Instant keyword search triggered via top-bar magnifier icon, active app filter chips, dynamic match count summaries, and complete per-application filtering via a Material 3 modal bottom sheet.
+- **Visual Substring Match Highlighting**: Real-time visual highlighting of search terms within notification titles and message bodies, along with `MATCH` badge pills on notification cards.
 - **Reactive Permission States**: Real-time service connectivity monitoring via [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt), dedicated initial setup onboarding in [`DisabledSetupView`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/DisabledSetupView.kt), and actionable warnings in [`AccessRevokedBanner`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/AccessRevokedBanner.kt) if system notification access is revoked or restricted.
 - **100% Offline Privacy**: Zero network permissions declared in [`AndroidManifest.xml`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/AndroidManifest.xml). Notification content never leaves the device.
 - **72-Hour Rolling Retention**: Automated pruning of expired records executed on every incoming notification and on-demand repository triggers to keep SQLite storage lightweight.
@@ -46,12 +48,15 @@ flowchart TD
     subgraph Domain["Domain Layer"]
         RECORD["NotificationRecord"]
         STATE["ListenerState (Active / Paused / Inactive)"]
+        APPFILTER["AppFilterItem"]
     end
 
     subgraph UI["Presentation Layer (Jetpack Compose)"]
         VM["NotificationViewModel"]
         UISTATE["NotificationUiState"]
         SCREEN["NotificationHistoryScreen"]
+        SEARCHBAR["SearchTopBar"]
+        BOTTOMSHEET["AppFilterBottomSheet"]
         HEADER["ServiceStatusHeader"]
         BANNER["AccessRevokedBanner / DisabledSetupView"]
         FEED["LazyColumn & NotificationCard"]
@@ -66,6 +71,8 @@ flowchart TD
     PREF --> VM
     VM -->|MutableStateFlow.asStateFlow| UISTATE
     UISTATE --> SCREEN
+    SCREEN --> SEARCHBAR
+    SCREEN --> BOTTOMSHEET
     SCREEN --> HEADER
     SCREEN --> BANNER
     SCREEN --> FEED
@@ -87,12 +94,15 @@ flowchart TD
 - **Domain Layer (`domain/`)**:
   - [`NotificationRecord`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/domain/model/NotificationRecord.kt): Immutable domain model holding title, content, app name, package name, timestamps, and UI expansion state.
   - [`ListenerState`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/domain/model/ListenerState.kt): Sealed representation of listener status (`Active`, `Paused`, `Inactive`).
+  - [`AppFilterItem`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/domain/model/AppFilterItem.kt): Encapsulates application filter properties, total counts, query match counts, and selection states.
 - **UI Layer (`ui/`)**:
   - [`MainActivity`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/MainActivity.kt): Single-activity entry point hosting edge-to-edge Compose UI.
   - [`NotificationHistoryScreen`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/NotificationHistoryScreen.kt): Container composable coordinating top app bar, service status banner, list state, and snackbars.
   - [`NotificationViewModel`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/NotificationViewModel.kt): ViewModel orchestrating UI state, permission checks, card expansion toggles, batch deletion, and undo restoration.
   - [`NotificationUiState`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/NotificationUiState.kt): Single immutable state data class consumed by Compose components.
   - Components:
+    - [`SearchTopBar`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/SearchTopBar.kt): Dedicated pill-shaped search bar with query clear action, back navigation, and filter trigger.
+    - [`AppFilterBottomSheet`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/AppFilterBottomSheet.kt): Material 3 modal bottom sheet supporting nested app search, radio selection, and dynamic match counts.
     - [`NotificationCard`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/NotificationCard.kt): Expandable notification list item card.
     - [`NotificationMetadataSection`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/NotificationMetadataSection.kt): Drawer showing raw system metadata and key attributes.
     - [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt): Dynamic status chip indicating live service connectivity and captured count.
@@ -148,7 +158,7 @@ Run all commands from the repository root:
 # Compile Kotlin code across debug variants
 ./gradlew compileDebugKotlin
 
-# Run all JVM unit tests (Repository, Card formatting, ViewModel)
+# Run all 38 JVM unit tests covering Repository, Card formatting, and Search/Filter ViewModel logic
 ./gradlew testDebugUnitTest
 
 # Assemble the debug APK (outputs to app/build/outputs/apk/debug/)
