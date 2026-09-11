@@ -9,6 +9,7 @@ import com.notificationhistory.data.local.AppDatabase
 import com.notificationhistory.data.local.UserPreferences
 import com.notificationhistory.data.repository.NotificationRepository
 import com.notificationhistory.data.repository.NotificationRepositoryImpl
+import com.notificationhistory.domain.model.AppFilterItem
 import com.notificationhistory.domain.model.ListenerState
 import com.notificationhistory.domain.model.NotificationRecord
 import com.notificationhistory.service.NotificationCaptureService
@@ -63,10 +64,7 @@ class NotificationViewModel(
                     userPreferences.setSetupCompleted(true)
                 }
                 _uiState.update { current ->
-                    current.copy(
-                        notifications = notifications.map { record ->
-                            record.copy(isExpanded = record.id in current.expandedCardIds)
-                        },
+                    val base = current.copy(
                         capturedCount = notifications.size,
                         listenerState = computeListenerState(
                             isServiceEnabled = isEnabled,
@@ -75,6 +73,7 @@ class NotificationViewModel(
                         ),
                         isSetupCompleted = isSetupCompleted || isEnabled
                     )
+                    base.updateDerivedState(newNotifications = notifications)
                 }
             }
         }
@@ -98,6 +97,96 @@ class NotificationViewModel(
         }
     }
 
+    internal fun computeFilteredNotifications(
+        notifications: List<NotificationRecord>,
+        searchQuery: String,
+        selectedAppFilter: String?,
+        expandedCardIds: Set<Long>
+    ): List<NotificationRecord> {
+        val hasFilter = selectedAppFilter != null
+        val hasQuery = searchQuery.isNotBlank()
+        val query = searchQuery.trim()
+
+        return notifications.filter { record ->
+            val matchesApp = !hasFilter || record.packageName == selectedAppFilter
+            val matchesQuery = !hasQuery || (
+                record.title.contains(query, ignoreCase = true) ||
+                record.text.contains(query, ignoreCase = true) ||
+                record.appName.contains(query, ignoreCase = true)
+            )
+            matchesApp && matchesQuery
+        }.map { record ->
+            record.copy(isExpanded = record.id in expandedCardIds)
+        }
+    }
+
+    internal fun computeAvailableAppFilters(
+        notifications: List<NotificationRecord>,
+        searchQuery: String,
+        selectedAppFilter: String?
+    ): List<AppFilterItem> {
+        val hasQuery = searchQuery.isNotBlank()
+        val query = searchQuery.trim()
+
+        return notifications
+            .groupBy { it.packageName }
+            .map { (packageName, records) ->
+                val appName = records.firstOrNull { it.appName.isNotBlank() }?.appName
+                    ?: records.firstOrNull()?.appName
+                    ?: packageName
+                val notificationCount = records.size
+                val matchCount = if (hasQuery) {
+                    records.count { record ->
+                        record.title.contains(query, ignoreCase = true) ||
+                        record.text.contains(query, ignoreCase = true) ||
+                        record.appName.contains(query, ignoreCase = true)
+                    }
+                } else {
+                    notificationCount
+                }
+                val isSelected = packageName == selectedAppFilter
+
+                AppFilterItem(
+                    packageName = packageName,
+                    appName = appName,
+                    notificationCount = notificationCount,
+                    matchCount = matchCount,
+                    isSelected = isSelected
+                )
+            }
+            .sortedBy { it.appName.lowercase() }
+    }
+
+    private fun NotificationUiState.updateDerivedState(
+        newNotifications: List<NotificationRecord> = this.notifications,
+        newSearchQuery: String = this.searchQuery,
+        newSelectedAppFilter: String? = this.selectedAppFilter,
+        newExpandedCardIds: Set<Long> = this.expandedCardIds
+    ): NotificationUiState {
+        val mappedNotifications = newNotifications.map { record ->
+            record.copy(isExpanded = record.id in newExpandedCardIds)
+        }
+        val filtered = computeFilteredNotifications(
+            notifications = mappedNotifications,
+            searchQuery = newSearchQuery,
+            selectedAppFilter = newSelectedAppFilter,
+            expandedCardIds = newExpandedCardIds
+        )
+        val available = computeAvailableAppFilters(
+            notifications = mappedNotifications,
+            searchQuery = newSearchQuery,
+            selectedAppFilter = newSelectedAppFilter
+        )
+        return this.copy(
+            notifications = mappedNotifications,
+            filteredNotifications = filtered,
+            availableAppFilters = available,
+            searchQuery = newSearchQuery,
+            selectedAppFilter = newSelectedAppFilter,
+            expandedCardIds = newExpandedCardIds
+        )
+    }
+
     fun toggleCardExpansion(id: Long) {
         _uiState.update { current ->
             val newExpanded = if (id in current.expandedCardIds) {
@@ -105,13 +194,51 @@ class NotificationViewModel(
             } else {
                 current.expandedCardIds + id
             }
+            current.updateDerivedState(newExpandedCardIds = newExpanded)
+        }
+    }
+
+    fun setSearchActive(active: Boolean) {
+        _uiState.update { current ->
+            val newSearchQuery = if (!active) "" else current.searchQuery
+            current.copy(isSearchActive = active)
+                .updateDerivedState(newSearchQuery = newSearchQuery)
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _uiState.update { current ->
+            current.updateDerivedState(newSearchQuery = query)
+        }
+    }
+
+    fun clearSearchQuery() {
+        onSearchQueryChanged("")
+    }
+
+    fun setAppFilterSheetVisible(visible: Boolean) {
+        _uiState.update { current ->
             current.copy(
-                expandedCardIds = newExpanded,
-                notifications = current.notifications.map { record ->
-                    record.copy(isExpanded = record.id in newExpanded)
-                }
+                isAppFilterSheetVisible = visible,
+                appFilterSearchQuery = if (!visible) "" else current.appFilterSearchQuery
             )
         }
+    }
+
+    fun onAppFilterSearchQueryChanged(query: String) {
+        _uiState.update { current ->
+            current.copy(appFilterSearchQuery = query)
+        }
+    }
+
+    fun selectAppFilter(packageName: String?) {
+        _uiState.update { current ->
+            current.updateDerivedState(newSelectedAppFilter = packageName)
+        }
+    }
+
+    fun clearAppFilter() {
+        selectAppFilter(null)
     }
 
     fun clearAll() {
@@ -121,7 +248,7 @@ class NotificationViewModel(
                 current.copy(
                     recentlyCleared = cleared,
                     snackbarMessage = "All notifications cleared"
-                )
+                ).updateDerivedState(newNotifications = emptyList())
             }
         }
     }
@@ -148,7 +275,13 @@ class NotificationViewModel(
         viewModelScope.launch {
             repository.deleteNotificationById(id)
             _uiState.update { current ->
-                current.copy(expandedCardIds = current.expandedCardIds - id)
+                val newExpanded = current.expandedCardIds - id
+                val newNotifications = current.notifications.filterNot { it.id == id }
+                current.copy(capturedCount = newNotifications.size)
+                    .updateDerivedState(
+                        newNotifications = newNotifications,
+                        newExpandedCardIds = newExpanded
+                    )
             }
         }
     }
