@@ -9,5 +9,6 @@ data class NotificationUiState(
     val capturedCount: Int = 0,
     val expandedCardIds: Set<Long> = emptySet(),
     val recentlyCleared: List<NotificationRecord> = emptyList(),
-    val snackbarMessage: String? = null
+    val snackbarMessage: String? = null,
+    val isSetupCompleted: Boolean = false
 )

@@ -1,19 +1,18 @@
 package com.notificationhistory.ui
 
 import android.app.Application
-import android.content.ComponentName
-import android.provider.Settings
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.notificationhistory.data.local.AppDatabase
+import com.notificationhistory.data.local.UserPreferences
 import com.notificationhistory.data.repository.NotificationRepository
 import com.notificationhistory.data.repository.NotificationRepositoryImpl
 import com.notificationhistory.domain.model.ListenerState
 import com.notificationhistory.domain.model.NotificationRecord
 import com.notificationhistory.service.NotificationCaptureService
+import com.notificationhistory.util.SettingsNavigationHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,30 +22,47 @@ import kotlinx.coroutines.launch
 
 class NotificationViewModel(
     private val application: Application,
-    private val repository: NotificationRepository
+    private val repository: NotificationRepository,
+    private val userPreferences: UserPreferences = UserPreferences(application)
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(
-        NotificationUiState(
-            listenerState = computeListenerState(
-                isServiceEnabled = isNotificationServiceEnabled(),
-                isConnected = NotificationCaptureService.isConnected.value,
-                hasNotifications = false
+        run {
+            val isEnabled = isNotificationServiceEnabled()
+            if (isEnabled && !userPreferences.isSetupCompleted()) {
+                userPreferences.setSetupCompleted(true)
+            }
+            NotificationUiState(
+                listenerState = computeListenerState(
+                    isServiceEnabled = isEnabled,
+                    isConnected = NotificationCaptureService.isConnected.value,
+                    hasNotifications = false
+                ),
+                isSetupCompleted = userPreferences.isSetupCompleted() || isEnabled
             )
-        )
+        }
     )
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
 
     init {
+        val initialEnabled = isNotificationServiceEnabled()
+        if (initialEnabled && !userPreferences.isSetupCompleted()) {
+            userPreferences.setSetupCompleted(true)
+        }
+
         viewModelScope.launch {
             combine(
                 repository.observeNotifications(),
-                NotificationCaptureService.isConnected
-            ) { notifications, isConnected ->
-                notifications to isConnected
-            }.collect { (notifications, isConnected) ->
+                NotificationCaptureService.isConnected,
+                userPreferences.observeSetupCompleted()
+            ) { notifications, isConnected, isSetupCompleted ->
+                Triple(notifications, isConnected, isSetupCompleted)
+            }.collect { (notifications, isConnected, isSetupCompleted) ->
+                val isEnabled = isNotificationServiceEnabled()
+                if (isEnabled && !isSetupCompleted) {
+                    userPreferences.setSetupCompleted(true)
+                }
                 _uiState.update { current ->
-                    val isEnabled = isNotificationServiceEnabled()
                     current.copy(
                         notifications = notifications.map { record ->
                             record.copy(isExpanded = record.id in current.expandedCardIds)
@@ -56,7 +72,8 @@ class NotificationViewModel(
                             isServiceEnabled = isEnabled,
                             isConnected = isConnected,
                             hasNotifications = notifications.isNotEmpty()
-                        )
+                        ),
+                        isSetupCompleted = isSetupCompleted || isEnabled
                     )
                 }
             }
@@ -64,21 +81,7 @@ class NotificationViewModel(
     }
 
     fun isNotificationServiceEnabled(): Boolean {
-        val enabledPackages = NotificationManagerCompat.getEnabledListenerPackages(application)
-        if (application.packageName in enabledPackages) {
-            return true
-        }
-
-        val flat = Settings.Secure.getString(
-            application.contentResolver,
-            "enabled_notification_listeners"
-        ) ?: return false
-
-        val myPackage = application.packageName
-        return flat.split(":").any { componentString ->
-            val component = ComponentName.unflattenFromString(componentString)
-            component?.packageName == myPackage
-        }
+        return SettingsNavigationHelper.isNotificationListenerEnabled(getApplication())
     }
 
     internal fun computeListenerState(
@@ -150,16 +153,28 @@ class NotificationViewModel(
         }
     }
 
+    fun markSetupCompleted(completed: Boolean = true) {
+        userPreferences.setSetupCompleted(completed)
+        _uiState.update { current ->
+            current.copy(isSetupCompleted = completed)
+        }
+    }
+
     fun refreshState() {
         val isEnabled = isNotificationServiceEnabled()
+        if (isEnabled && !userPreferences.isSetupCompleted()) {
+            userPreferences.setSetupCompleted(true)
+        }
         val isConnected = NotificationCaptureService.isConnected.value
+        val isSetupCompleted = userPreferences.isSetupCompleted()
         _uiState.update { current ->
             current.copy(
                 listenerState = computeListenerState(
                     isServiceEnabled = isEnabled,
                     isConnected = isConnected,
                     hasNotifications = current.notifications.isNotEmpty()
-                )
+                ),
+                isSetupCompleted = isSetupCompleted || isEnabled
             )
         }
     }
