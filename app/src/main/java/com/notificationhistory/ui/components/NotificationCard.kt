@@ -164,11 +164,10 @@ fun NotificationCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f)
                 )
 
-                // Spacer / weight(1f)
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Time string: formatted time, labelSmall, color onSurfaceVariant
                 val formattedTime = remember(record.postTime) {
