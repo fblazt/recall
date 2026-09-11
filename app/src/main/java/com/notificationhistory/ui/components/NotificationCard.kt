@@ -31,8 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -83,6 +87,55 @@ fun formatNotificationTime(
 }
 
 /**
+ * Creates an [AnnotatedString] with highlighted substring matches for [query].
+ * Matches are case-insensitive. If [query] is blank or no matches are found,
+ * the original [text] is returned unmodified.
+ */
+@Composable
+fun highlightSearchQuery(
+    text: String,
+    query: String,
+    highlightBackgroundColor: Color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+    highlightTextColor: Color = MaterialTheme.colorScheme.onPrimaryContainer
+): AnnotatedString {
+    val trimmedQuery = query.trim()
+    if (trimmedQuery.isEmpty() || text.isEmpty()) {
+        return AnnotatedString(text)
+    }
+
+    return remember(text, trimmedQuery, highlightBackgroundColor, highlightTextColor) {
+        val matches = mutableListOf<Pair<Int, Int>>()
+        var startIndex = 0
+        while (startIndex < text.length) {
+            val foundIndex = text.indexOf(trimmedQuery, startIndex, ignoreCase = true)
+            if (foundIndex == -1) break
+            val endIndex = foundIndex + trimmedQuery.length
+            matches.add(foundIndex to endIndex)
+            startIndex = endIndex
+        }
+
+        if (matches.isEmpty()) {
+            AnnotatedString(text)
+        } else {
+            buildAnnotatedString {
+                append(text)
+                for ((start, end) in matches) {
+                    addStyle(
+                        style = SpanStyle(
+                            background = highlightBackgroundColor,
+                            color = highlightTextColor,
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        start = start,
+                        end = end
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * Material 3 Notification Card displaying notification header, payload content,
  * and optional metadata expansion matching the stitch design specification.
  */
@@ -92,6 +145,7 @@ fun NotificationCard(
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
     modifier: Modifier = Modifier,
+    searchQuery: String = "",
     metadataContent: @Composable (() -> Unit)? = null
 ) {
     Card(
@@ -167,6 +221,30 @@ fun NotificationCard(
                     modifier = Modifier.weight(1f)
                 )
 
+                val isMatching = remember(record, searchQuery) {
+                    searchQuery.isNotBlank() && (
+                        record.title.contains(searchQuery.trim(), ignoreCase = true) ||
+                        record.text.contains(searchQuery.trim(), ignoreCase = true) ||
+                        record.appName.contains(searchQuery.trim(), ignoreCase = true)
+                    )
+                }
+                if (isMatching) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "MATCH",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // Time string: formatted time, labelSmall, color onSurfaceVariant
@@ -204,7 +282,10 @@ fun NotificationCard(
                 ) {
                     if (record.title.isNotBlank()) {
                         Text(
-                            text = record.title,
+                            text = highlightSearchQuery(
+                                text = record.title,
+                                query = searchQuery
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -212,7 +293,10 @@ fun NotificationCard(
                     }
                     if (record.text.isNotBlank()) {
                         Text(
-                            text = record.text,
+                            text = highlightSearchQuery(
+                                text = record.text,
+                                query = searchQuery
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = if (isExpanded) Int.MAX_VALUE else 2,
@@ -279,3 +363,26 @@ private fun NotificationCardExpandedPreview() {
         )
     }
 }
+
+@Preview(showBackground = true, backgroundColor = 0xFF111318)
+@Composable
+private fun NotificationCardHighlightedPreview() {
+    NotificationHistoryTheme {
+        NotificationCard(
+            record = NotificationRecord(
+                id = 3L,
+                packageName = "com.google.android.gm",
+                appName = "Gmail",
+                title = "Security alert for your account",
+                text = "New device signed in to your Google Account. Check alert now to ensure it was you.",
+                postTime = System.currentTimeMillis(),
+                notificationKey = "key_3",
+                category = "CATEGORY_EMAIL"
+            ),
+            isExpanded = false,
+            searchQuery = "alert",
+            onToggleExpand = {}
+        )
+    }
+}
+
