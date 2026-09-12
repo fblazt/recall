@@ -181,7 +181,7 @@ fun NotificationHistoryScreen(
             ServiceStatusHeader(
                 listenerState = uiState.listenerState,
                 capturedCount = uiState.capturedCount,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
             )
 
             if (uiState.isSearchActive) {
