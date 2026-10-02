@@ -15,8 +15,11 @@ android {
         applicationId = "com.notificationhistory"
         minSdk = 33
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (project.findProperty("VERSION_CODE") as? String)?.toIntOrNull() ?: 1
+        // x-release-please-start-version
+        val baseVersionName = "1.0.0"
+        // x-release-please-end
+        versionName = (project.findProperty("VERSION_NAME") as? String) ?: baseVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
