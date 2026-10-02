@@ -1,4 +1,4 @@
-# Notification History (Android)
+# Recall (Android)
 
 [![Min SDK: 33](https://img.shields.io/badge/minSdk-33-00E676?style=flat-square&logo=android&logoColor=black)](file:///Users/fblazt/Code/Personal/andro/notification-history/app/build.gradle.kts)
 [![Target SDK: 36](https://img.shields.io/badge/targetSdk-36-00B0FF?style=flat-square&logo=android&logoColor=black)](file:///Users/fblazt/Code/Personal/andro/notification-history/app/build.gradle.kts)
@@ -131,13 +131,13 @@ Android requires explicit user authorization via the **Device & app notification
 
 1. Install and launch the application.
 2. In the initial [`DisabledSetupView`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/DisabledSetupView.kt) screen, tap **"Enable Notification Access"**.
-3. You will be redirected directly into the system settings page for **Notification History**.
+3. You will be redirected directly into the system settings page for **Recall**.
 4. Toggle **"Allow notification access"** to **ON** and confirm the Android system security prompt.
 5. Return to the app. The [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt) will reactively update to an emerald dot with `"Listener service active"`.
 
 > [!NOTE]
 > On sideloaded APKs on Android 13+ (API 33+), Android may mark notification listener permissions as "Restricted settings". If the toggle is greyed out:
-> 1. Go to **Settings > Apps > Notification History**.
+> 1. Go to **Settings > Apps > Recall**.
 > 2. Tap the **three-dots menu (⋮)** in the top right corner.
 > 3. Tap **"Allow restricted settings"** and authenticate with your device PIN or fingerprint.
 > 4. Re-open the app and grant notification access.
