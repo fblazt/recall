@@ -77,6 +77,6 @@ jobs:
           TAG_NAME="${{ needs.release-please.outputs.tag_name }}"
           VERSION="${{ needs.release-please.outputs.version }}"
           APK_SRC="app/build/outputs/apk/release/app-release.apk"
-          APK_DEST="app/build/outputs/apk/release/notification-history-v${VERSION}.apk"
+          APK_DEST="app/build/outputs/apk/release/recall-v${VERSION}.apk"
           mv "$APK_SRC" "$APK_DEST"
           gh release upload "$TAG_NAME" "$APK_DEST" --clobber
