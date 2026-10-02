@@ -87,7 +87,7 @@ fun DisabledSetupView(
 
         // Subtitle
         Text(
-            text = "To save your notifications for 72 hours, Notification History requires permission in Android System Settings. All logs remain 100% offline and stored locally on your device.",
+            text = "Recall requires permission in Android System Settings. All logs remain 100% offline and stored locally on your device.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
