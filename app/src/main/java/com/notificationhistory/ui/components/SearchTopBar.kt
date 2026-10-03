@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -46,7 +46,7 @@ fun SearchTopBar(
     }
 
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
             .fillMaxWidth()
@@ -116,32 +116,36 @@ fun SearchTopBar(
     }
 }
 
-@Preview(name = "Search Top Bar - Empty", showBackground = true, backgroundColor = 0xFF111318)
+@Preview(name = "Search Top Bar - Empty", showBackground = true, backgroundColor = 0xFF131318)
 @Composable
 private fun SearchTopBarEmptyPreview() {
     NotificationHistoryTheme {
-        SearchTopBar(
-            query = "",
-            onQueryChange = {},
-            onClearQuery = {},
-            onCloseSearch = {},
-            onFilterClick = {},
-            modifier = Modifier.padding(16.dp)
-        )
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            SearchTopBar(
+                query = "",
+                onQueryChange = {},
+                onClearQuery = {},
+                onCloseSearch = {},
+                onFilterClick = {},
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     }
 }
 
-@Preview(name = "Search Top Bar - With Query", showBackground = true, backgroundColor = 0xFF111318)
+@Preview(name = "Search Top Bar - With Query", showBackground = true, backgroundColor = 0xFF131318)
 @Composable
 private fun SearchTopBarWithQueryPreview() {
     NotificationHistoryTheme {
-        SearchTopBar(
-            query = "WhatsApp message",
-            onQueryChange = {},
-            onClearQuery = {},
-            onCloseSearch = {},
-            onFilterClick = {},
-            modifier = Modifier.padding(16.dp)
-        )
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            SearchTopBar(
+                query = "WhatsApp message",
+                onQueryChange = {},
+                onClearQuery = {},
+                onCloseSearch = {},
+                onFilterClick = {},
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     }
 }
