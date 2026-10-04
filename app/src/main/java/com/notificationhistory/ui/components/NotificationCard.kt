@@ -97,7 +97,7 @@ fun formatNotificationTime(
 fun highlightSearchQuery(
     text: String,
     query: String,
-    highlightBackgroundColor: Color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+    highlightBackgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
     highlightTextColor: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ): AnnotatedString {
     val trimmedQuery = query.trim()
@@ -126,7 +126,7 @@ fun highlightSearchQuery(
                         style = SpanStyle(
                             background = highlightBackgroundColor,
                             color = highlightTextColor,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         ),
                         start = start,
                         end = end
@@ -226,29 +226,6 @@ fun NotificationCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                val isMatching = remember(record, searchQuery) {
-                    searchQuery.isNotBlank() && (
-                        record.title.contains(searchQuery.trim(), ignoreCase = true) ||
-                        record.text.contains(searchQuery.trim(), ignoreCase = true) ||
-                        record.appName.contains(searchQuery.trim(), ignoreCase = true)
-                    )
-                }
-                if (isMatching) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "MATCH",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
