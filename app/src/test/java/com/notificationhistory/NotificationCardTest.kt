@@ -142,4 +142,57 @@ class NotificationCardTest {
 
         assertEquals("4:20 PM", formatNotificationTime(millisNy, nyZone))
     }
+
+    @Test
+    fun formatNotificationTime_atDayBoundaries_handlesTransitionsCorrectly() {
+        val today = LocalDate.now(zoneId)
+        val yesterday = today.minusDays(1)
+
+        // Exact start of today
+        val midnightToday = ZonedDateTime.of(today, LocalTime.MIN, zoneId)
+        assertEquals("12:00 AM", formatNotificationTime(midnightToday.toInstant().toEpochMilli(), zoneId))
+
+        // End of today
+        val endOfToday = ZonedDateTime.of(today, LocalTime.of(23, 59, 59), zoneId)
+        assertEquals("11:59 PM", formatNotificationTime(endOfToday.toInstant().toEpochMilli(), zoneId))
+
+        // Start of yesterday
+        val startOfYesterday = ZonedDateTime.of(yesterday, LocalTime.MIN, zoneId)
+        assertEquals("Yesterday, 12:00 AM", formatNotificationTime(startOfYesterday.toInstant().toEpochMilli(), zoneId))
+
+        // End of yesterday
+        val endOfYesterday = ZonedDateTime.of(yesterday, LocalTime.of(23, 59, 59), zoneId)
+        assertEquals("Yesterday, 11:59 PM", formatNotificationTime(endOfYesterday.toInstant().toEpochMilli(), zoneId))
+    }
+
+    @Test
+    fun formatNotificationTime_onLeapYear_formatsCorrectly() {
+        val leapDate = LocalDate.of(2024, 2, 29)
+        val leapZonedDateTime = ZonedDateTime.of(leapDate, LocalTime.of(14, 15), zoneId)
+        val millis = leapZonedDateTime.toInstant().toEpochMilli()
+
+        val today = LocalDate.now(zoneId)
+        val expected = if (today.year == 2024) {
+            "Feb 29, 2:15 PM"
+        } else {
+            "Feb 29, 2024, 2:15 PM"
+        }
+        assertEquals(expected, formatNotificationTime(millis, zoneId))
+    }
+
+    @Test
+    fun formatNotificationTime_sameInstantInDifferentZones_formatsAccordingToZone() {
+        val tokyoZone = ZoneId.of("Asia/Tokyo")
+        val honoluluZone = ZoneId.of("Pacific/Honolulu")
+
+        // 2026-10-04 15:00 UTC = 2026-10-05 00:00 in Tokyo (+9), 2026-10-04 05:00 in Honolulu (-10)
+        val fixedZdt = ZonedDateTime.of(LocalDate.of(2026, 10, 4), LocalTime.of(15, 0), zoneId)
+        val millis = fixedZdt.toInstant().toEpochMilli()
+
+        val formattedTokyo = formatNotificationTime(millis, tokyoZone)
+        val formattedHonolulu = formatNotificationTime(millis, honoluluZone)
+
+        assertTrue(formattedTokyo.contains("12:00 AM"))
+        assertTrue(formattedHonolulu.contains("5:00 AM"))
+    }
 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -33,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -95,7 +97,7 @@ fun formatNotificationTime(
 fun highlightSearchQuery(
     text: String,
     query: String,
-    highlightBackgroundColor: Color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+    highlightBackgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
     highlightTextColor: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ): AnnotatedString {
     val trimmedQuery = query.trim()
@@ -124,7 +126,7 @@ fun highlightSearchQuery(
                         style = SpanStyle(
                             background = highlightBackgroundColor,
                             color = highlightTextColor,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         ),
                         start = start,
                         end = end
@@ -149,17 +151,17 @@ fun NotificationCard(
     metadataContent: @Composable (() -> Unit)? = null
 ) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
         ),
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onToggleExpand)
     ) {
         Column(
@@ -173,7 +175,7 @@ fun NotificationCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // App icon container (32.dp, rounded 10.dp, subtle tinted background, icon or initial letter)
+                // App icon container (32.dp circular avatar or fallback)
                 val context = LocalContext.current
                 val appIcon = remember(record.packageName) {
                     runCatching {
@@ -186,25 +188,28 @@ fun NotificationCard(
                     displayAppName.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (appIcon != null) {
-                        Image(
-                            bitmap = appIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    } else {
+                if (appIcon != null) {
+                    Image(
+                        bitmap = appIcon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = initial,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
@@ -221,29 +226,6 @@ fun NotificationCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                val isMatching = remember(record, searchQuery) {
-                    searchQuery.isNotBlank() && (
-                        record.title.contains(searchQuery.trim(), ignoreCase = true) ||
-                        record.text.contains(searchQuery.trim(), ignoreCase = true) ||
-                        record.appName.contains(searchQuery.trim(), ignoreCase = true)
-                    )
-                }
-                if (isMatching) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "MATCH",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
@@ -287,7 +269,7 @@ fun NotificationCard(
                                 query = searchQuery
                             ),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }

@@ -1,7 +1,6 @@
 package com.notificationhistory.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.NotificationsOff
@@ -35,10 +33,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.notificationhistory.ui.theme.NotificationHistoryTheme
 
-/**
- * Centered setup view displayed when notification listener access is inactive.
- * Guides the user to grant notification capture permission in Android System Settings.
- */
 @Composable
 fun DisabledSetupView(
     onOpenSettings: () -> Unit,
@@ -51,41 +45,33 @@ fun DisabledSetupView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 96.dp container with 48.dp centered icon
         Box(
             modifier = Modifier
                 .size(96.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(24.dp)
-                ),
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.NotificationsOff,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(44.dp)
             )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title
         Text(
             text = "Enable Notification Capture",
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Subtitle
         Text(
             text = "Recall requires permission in Android System Settings. All logs remain 100% offline and stored locally on your device.",
             style = MaterialTheme.typography.bodyMedium,
@@ -95,13 +81,12 @@ fun DisabledSetupView(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Action button
         Button(
             onClick = onOpenSettings,
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
         ) {
@@ -112,7 +97,7 @@ fun DisabledSetupView(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Open System Settings",
+                text = "Open settings",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold
             )
@@ -126,7 +111,6 @@ fun DisabledSetupView(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Footer
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -134,13 +118,13 @@ fun DisabledSetupView(
             Icon(
                 imageVector = Icons.Default.Sync,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.size(14.dp)
             )
             Text(
                 text = "The feed will update automatically once enabled.",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
         }
