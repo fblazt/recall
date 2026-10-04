@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/fblazt/recall/compare/v1.1.0...v1.2.0) (2026-10-04)
+
+
+### Features
+
+* **ui:** redesign interface to material 3 expressive visual standard ([#2](https://github.com/fblazt/recall/issues/2)) ([407116e](https://github.com/fblazt/recall/commit/407116ec0302c47ac6cb9783cf6f6d58015c4f6c))
+
 ## [1.1.0](https://github.com/fblazt/recall/compare/v1.0.0...v1.1.0) (2026-10-02)
 
 
