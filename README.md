@@ -15,8 +15,8 @@ A native, offline-first Android application that captures and stores status bar 
 
 - **Status Bar Notification Capture**: Continuous background interception powered by [`NotificationCaptureService`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/service/NotificationCaptureService.kt) (`NotificationListenerService`). Automatically skips internal self-notifications and system noise.
 - **Real-Time Keyword Search & Application Filtering**: Instant keyword search triggered via top-bar magnifier icon, active app filter chips, dynamic match count summaries, and complete per-application filtering via a Material 3 modal bottom sheet.
-- **Visual Substring Match Highlighting**: Real-time visual highlighting of search terms within notification titles and message bodies, along with `MATCH` badge pills on notification cards.
-- **Reactive Permission States**: Real-time service connectivity monitoring via [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt), dedicated initial setup onboarding in [`DisabledSetupView`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/DisabledSetupView.kt), and actionable warnings in [`AccessRevokedBanner`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/AccessRevokedBanner.kt) if system notification access is revoked or restricted.
+- **Visual Substring Match Highlighting**: Real-time visual highlighting of search queries via styled inline substring spans within notification titles and message bodies, with match count badges and summaries provided in the filter controls.
+- **Reactive Permission States & Summary**: Service state is surfaced by [`DisabledSetupView`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/DisabledSetupView.kt) (initial onboarding) and [`AccessRevokedBanner`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/AccessRevokedBanner.kt) (paused state) when system notification access is revoked or restricted, alongside a captured notification counter and rolling 3-day window summary row in [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt) ("$capturedCount notifications • Last 3 days").
 - **100% Offline Privacy**: Zero network permissions declared in [`AndroidManifest.xml`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/AndroidManifest.xml). Notification content never leaves the device.
 - **72-Hour Rolling Retention**: Automated pruning of expired records executed on every incoming notification and on-demand repository triggers to keep SQLite storage lightweight.
 
@@ -41,7 +41,7 @@ flowchart TD
     subgraph Data["Data Layer (Local Storage)"]
         DB[("AppDatabase (Room SQLite)")]
         DAO["NotificationDao"]
-        PREF["UserPreferences (DataStore / SharedPreferences)"]
+        PREF["UserPreferences (SharedPreferences)"]
         REPO["NotificationRepositoryImpl"]
     end
 
@@ -76,7 +76,8 @@ flowchart TD
     SCREEN --> HEADER
     SCREEN --> BANNER
     SCREEN --> FEED
-    FEED -->|UI Events: toggle, clear, undo| VM
+    SCREEN -->|TopAppBar overflow menu: clear-all, Snackbar: undo| VM
+    FEED -->|Card expansion toggles| VM
     VM -->|Data mutations| REPO
     REPO --> DAO
 ```
@@ -105,7 +106,7 @@ flowchart TD
     - [`AppFilterBottomSheet`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/AppFilterBottomSheet.kt): Material 3 modal bottom sheet supporting nested app search, radio selection, and dynamic match counts.
     - [`NotificationCard`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/NotificationCard.kt): Expandable notification list item card.
     - [`NotificationMetadataSection`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/NotificationMetadataSection.kt): Drawer showing raw system metadata and key attributes.
-    - [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt): Dynamic status chip indicating live service connectivity and captured count.
+    - [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt): Displays captured notification counter and rolling 3-day window summary row ("$capturedCount notifications • Last 3 days"). Service state is surfaced by DisabledSetupView (initial onboarding) and AccessRevokedBanner (paused state).
     - [`AccessRevokedBanner`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/AccessRevokedBanner.kt): Warning callout when listener permission has been disabled.
     - [`DisabledSetupView`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/DisabledSetupView.kt): Initial onboarding screen when permissions are not yet configured.
 
@@ -119,7 +120,7 @@ flowchart TD
 | **Local Database** | AndroidX Room 2.7.2 with Google KSP | [`libs.versions.toml`](file:///Users/fblazt/Code/Personal/andro/notification-history/gradle/libs.versions.toml) |
 | **Asynchrony & State** | Kotlinx Coroutines 1.10.2 & `StateFlow` | [`libs.versions.toml`](file:///Users/fblazt/Code/Personal/andro/notification-history/gradle/libs.versions.toml) |
 | **Navigation** | AndroidX Navigation3 Core 1.0.1 | [`libs.versions.toml`](file:///Users/fblazt/Code/Personal/andro/notification-history/gradle/libs.versions.toml) |
-| **Build Tool** | Android Gradle Plugin 9.0.1 / Gradle 8.11+ | [`libs.versions.toml`](file:///Users/fblazt/Code/Personal/andro/notification-history/gradle/libs.versions.toml) |
+| **Build Tool** | Android Gradle Plugin 9.0.1 / Gradle 9.1.0 | [`libs.versions.toml`](file:///Users/fblazt/Code/Personal/andro/notification-history/gradle/libs.versions.toml) |
 
 ---
 
@@ -130,10 +131,10 @@ Android requires explicit user authorization via the **Device & app notification
 ### Enabling Notification Access (Android 13+)
 
 1. Install and launch the application.
-2. In the initial [`DisabledSetupView`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/DisabledSetupView.kt) screen, tap **"Enable Notification Access"**.
+2. In the initial [`DisabledSetupView`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/DisabledSetupView.kt) screen, tap **"Open settings"**.
 3. You will be redirected directly into the system settings page for **Recall**.
 4. Toggle **"Allow notification access"** to **ON** and confirm the Android system security prompt.
-5. Return to the app. The [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt) will reactively update to an emerald dot with `"Listener service active"`.
+5. Return to the app. Returning to the app displays the active feed with the notification summary row in [`ServiceStatusHeader`](file:///Users/fblazt/Code/Personal/andro/notification-history/app/src/main/java/com/notificationhistory/ui/components/ServiceStatusHeader.kt) ("X notifications • Last 3 days").
 
 > [!NOTE]
 > On sideloaded APKs on Android 13+ (API 33+), Android may mark notification listener permissions as "Restricted settings". If the toggle is greyed out:
@@ -158,7 +159,7 @@ Run all commands from the repository root:
 # Compile Kotlin code across debug variants
 ./gradlew compileDebugKotlin
 
-# Run all 38 JVM unit tests covering Repository, Card formatting, and Search/Filter ViewModel logic
+# Run all 45 JVM unit tests covering Repository, Card formatting, Search/Filter ViewModel logic, and ServiceStatusHeader
 ./gradlew testDebugUnitTest
 
 # Assemble the debug APK (outputs to app/build/outputs/apk/debug/)
