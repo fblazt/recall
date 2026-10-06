@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/fblazt/recall/compare/v1.2.0...v1.3.0) (2026-10-06)
+
+
+### Features
+
+* **build:** enable proguard and r8 minification ([#5](https://github.com/fblazt/recall/issues/5)) ([5e2b392](https://github.com/fblazt/recall/commit/5e2b39289513eec1dc010f4482f7d99c19185e1d))
+
 ## [1.2.0](https://github.com/fblazt/recall/compare/v1.1.0...v1.2.0) (2026-10-04)
 
 
