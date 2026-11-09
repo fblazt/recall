@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Recall</string>
     <string name="notification_service_label">Recall Notification Service</string>
+    <string name="scroll_to_top_description">Scroll to top of notification history</string>
 </resources>

@@ -2,6 +2,12 @@ package com.notificationhistory.ui
 
 import android.app.Application
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,11 +25,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.MoreVert
@@ -33,10 +42,12 @@ import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -48,9 +59,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +91,29 @@ import com.notificationhistory.ui.components.NotificationMetadataSection
 import com.notificationhistory.ui.components.SearchTopBar
 import com.notificationhistory.ui.components.ServiceStatusHeader
 import com.notificationhistory.util.SettingsNavigationHelper
+import kotlinx.coroutines.launch
+
+internal fun shouldShowScrollToTop(
+    listenerState: ListenerState,
+    isSearchActive: Boolean,
+    hasNotifications: Boolean,
+    isScrolledPastThreshold: Boolean
+): Boolean = listenerState != ListenerState.Inactive &&
+    !isSearchActive &&
+    hasNotifications &&
+    isScrolledPastThreshold
+
+internal fun shouldShowScrollToTop(
+    listenerState: ListenerState,
+    isSearchActive: Boolean,
+    hasNotifications: Boolean,
+    firstVisibleItemIndex: Int
+): Boolean = shouldShowScrollToTop(
+    listenerState = listenerState,
+    isSearchActive = isSearchActive,
+    hasNotifications = hasNotifications,
+    isScrolledPastThreshold = firstVisibleItemIndex > 2
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,10 +123,22 @@ fun NotificationHistoryScreen(
             LocalContext.current.applicationContext as Application
         )
     ),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+
+    val isScrolledPastThreshold by remember(listState) {
+        derivedStateOf { listState.firstVisibleItemIndex > 2 }
+    }
+    val showScrollToTop = shouldShowScrollToTop(
+        listenerState = uiState.listenerState,
+        isSearchActive = uiState.isSearchActive,
+        hasNotifications = uiState.filteredNotifications.isNotEmpty(),
+        isScrolledPastThreshold = isScrolledPastThreshold
+    )
 
     BackHandler(enabled = uiState.isSearchActive) {
         viewModel.setSearchActive(false)
@@ -200,6 +248,36 @@ fun NotificationHistoryScreen(
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
+        },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = showScrollToTop,
+                enter = fadeIn(tween(180)) + scaleIn(initialScale = 0.8f, animationSpec = tween(180)),
+                exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.8f, animationSpec = tween(150))
+            ) {
+                SmallFloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            if (listState.firstVisibleItemIndex > 20) {
+                                listState.scrollToItem(20)
+                            }
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 6.dp
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowUpward,
+                        contentDescription = stringResource(R.string.scroll_to_top_description)
+                    )
+                }
+            }
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { innerPadding ->
@@ -406,7 +484,8 @@ fun NotificationHistoryScreen(
                 )
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
+                    state = listState,
+                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 64.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
