@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/fblazt/recall/compare/v1.3.0...v1.4.0) (2026-11-09)
+
+
+### Features
+
+* **ui:** add scroll to top floating button on notification history feed ([#7](https://github.com/fblazt/recall/issues/7)) ([adf2cf9](https://github.com/fblazt/recall/commit/adf2cf9c220cab219cdeffcef514cc75fdfcbca4))
+
 ## [1.3.0](https://github.com/fblazt/recall/compare/v1.2.0...v1.3.0) (2026-10-06)
 
 
