@@ -9,6 +9,8 @@
 
 A native, offline-first Android application that captures and stores status bar notifications locally in an SQLite database with an automatic 72-hour rolling retention policy, displayed in an expressive Material You dark theme feed.
 
+![Recall demo showing live notification capture, metadata inspection, keyword search highlighting, and app filtering](.github/assets/recall-demo.gif)
+
 ---
 
 ## Key Features
